@@ -1,76 +1,25 @@
-
-"use client";
-
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
+import { Suspense } from 'react';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { Header } from "@/components/dashboard/header";
-import { AppSidebar } from "@/components/app-sidebar";
+  CardDescription
+} from '@/components/ui/card';
+import { Header } from '@/components/dashboard/header';
+import { MetricsOverview } from '@/components/dashboard/metrics-overview';
+import { RevenueChart } from '@/components/dashboard/revenue-chart';
+import { SalesByCategoryChart } from '@/components/dashboard/sales-by-category-chart';
+import { DataTableWrapper } from '@/components/dashboard/data-table-wrapper';
+import { CardSkeleton } from '@/components/skeletons/card-skeleton';
+import { ChartSkeleton } from '@/components/skeletons/chart-skeleton';
+import { TableSkeleton } from '@/components/skeletons/table-skeleton';
+import { AppSidebar } from '@/components/app-sidebar';
+import { getRevenueData, getSalesByCategoryData } from '@/lib/data';
 
-const profileFormSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  email: z.string().email(),
-});
-
-const notificationsFormSchema = z.object({
-  weeklyReports: z.boolean().default(false),
-  monthlyReports: z.boolean().default(true),
-  kpiAlerts: z.boolean().default(false),
-});
-
-export default function SettingsPage() {
-  const { toast } = useToast();
-
-  const profileForm = useForm<z.infer<typeof profileFormSchema>>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      name: "Valued Client",
-      email: "client@example.com",
-    },
-  });
-
-  const notificationsForm = useForm<z.infer<typeof notificationsFormSchema>>({
-    resolver: zodResolver(notificationsFormSchema),
-    defaultValues: {
-      weeklyReports: false,
-      monthlyReports: true,
-      kpiAlerts: false,
-    },
-  });
-
-  function onProfileSubmit(values: z.infer<typeof profileFormSchema>) {
-    toast({
-      title: "Profile Updated",
-      description: "Your profile information has been saved.",
-    });
-  }
-
-  function onNotificationsSubmit(values: z.infer<typeof notificationsFormSchema>) {
-    toast({
-      title: "Notifications Updated",
-      description: "Your notification preferences have been saved.",
-    });
-  }
+export default async function Home() {
+  const revenueData = await getRevenueData();
+  const salesByCategoryData = await getSalesByCategoryData();
 
   return (
     <div className="flex min-h-screen w-full">
@@ -78,135 +27,53 @@ export default function SettingsPage() {
       <div className="flex w-full flex-col">
         <Header />
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-          <div className="grid gap-6">
-            <Card>
+          <Suspense
+            fallback={
+              <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+              </div>
+            }
+          >
+            <MetricsOverview />
+          </Suspense>
+          <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
+            <Card className="xl:col-span-2">
               <CardHeader>
-                <CardTitle>Profile</CardTitle>
-                <CardDescription>
-                  Manage your personal information.
-                </CardDescription>
+                <CardTitle>Revenue Over Time</CardTitle>
+                <CardDescription>A summary of your revenue over the last 7 months.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <Form {...profileForm}>
-                  <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8">
-                    <FormField
-                      control={profileForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Your name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={profileForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="Your email" readOnly {...field} />
-                          </FormControl>
-                           <FormDescription>
-                            Contact support to change your email address.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit">Update Profile</Button>
-                  </form>
-                </Form>
+              <CardContent className="pl-2">
+                <Suspense fallback={<ChartSkeleton />}>
+                  <RevenueChart data={revenueData} />
+                </Suspense>
               </CardContent>
             </Card>
-
             <Card>
               <CardHeader>
-                <CardTitle>Notifications</CardTitle>
-                <CardDescription>
-                  Configure how you receive updates from the dashboard.
-                </CardDescription>
+                <CardTitle>Sales by Category</CardTitle>
+                 <CardDescription>A breakdown of sales by product category.</CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...notificationsForm}>
-                  <form onSubmit={notificationsForm.handleSubmit(onNotificationsSubmit)} className="space-y-8">
-                    <FormField
-                      control={notificationsForm.control}
-                      name="weeklyReports"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                              Weekly Reports
-                            </FormLabel>
-                            <FormDescription>
-                              Receive a summary of the past week's performance every Monday.
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                     <FormField
-                      control={notificationsForm.control}
-                      name="monthlyReports"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                              Monthly Reports
-                            </FormLabel>
-                            <FormDescription>
-                              Receive a comprehensive report at the end of each month.
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                     <FormField
-                      control={notificationsForm.control}
-                      name="kpiAlerts"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                              KPI Alerts
-                            </FormLabel>
-                            <FormDescription>
-                              Get notified immediately about significant changes in your key metrics.
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              aria-readonly
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit">Save Preferences</Button>
-                  </form>
-                </Form>
+                <Suspense fallback={<ChartSkeleton />}>
+                  <SalesByCategoryChart data={salesByCategoryData} />
+                </Suspense>
               </CardContent>
             </Card>
           </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Transactions</CardTitle>
+              <CardDescription>A list of the most recent transactions.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={<TableSkeleton />}>
+                <DataTableWrapper />
+              </Suspense>
+            </CardContent>
+          </Card>
         </main>
       </div>
     </div>
